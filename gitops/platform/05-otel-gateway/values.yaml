@@ -1,0 +1,129 @@
+# gitops/platform/05-otel-gateway/values.yaml
+
+mode: deployment
+
+image:
+  repository: otel/opentelemetry-collector-contrib
+  tag: 0.99.0
+
+replicaCount: 1
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 512Mi
+
+ports:
+  otlp:
+    enabled: true
+    containerPort: 4317
+    servicePort: 4317
+    protocol: TCP
+
+  otlp-http:
+    enabled: true
+    containerPort: 4318
+    servicePort: 4318
+    protocol: TCP
+
+  metrics:
+    enabled: true
+    containerPort: 8888
+    servicePort: 8888
+    protocol: TCP
+
+  health:
+    enabled: true
+    containerPort: 13133
+    servicePort: 13133
+    protocol: TCP
+
+service:
+  type: ClusterIP
+
+config:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: ${env:MY_POD_IP}:4317
+        http:
+          endpoint: ${env:MY_POD_IP}:4318
+
+  processors:
+    memory_limiter:
+      check_interval: 1s
+      limit_mib: 400
+      spike_limit_mib: 100
+
+    resource:
+      attributes:
+        - key: deployment.environment
+          value: dev
+          action: upsert
+
+        - key: telemetry.source
+          value: ec2-tomcat
+          action: upsert
+
+    attributes/loki_hints:
+      actions:
+        - action: insert
+          key: loki.resource.labels
+          value: service.name,host.name,deployment.environment,telemetry.source
+
+    batch:
+      send_batch_size: 1024
+      timeout: 5s
+
+  exporters:
+    prometheusremotewrite/mimir:
+      endpoint: http://mimir-distributor.observability.svc.cluster.local:8080/api/v1/push
+      headers:
+        X-Scope-OrgID: "1"
+
+    loki:
+      endpoint: http://loki-write.observability.svc.cluster.local:3100/loki/api/v1/push
+      headers:
+        X-Scope-OrgID: self-monitoring
+
+    debug:
+      verbosity: basic
+
+  extensions:
+    health_check:
+      endpoint: ${env:MY_POD_IP}:13133
+
+  service:
+    extensions:
+      - health_check
+
+    telemetry:
+      logs:
+        level: warn
+      metrics:
+        address: ${env:MY_POD_IP}:8888
+
+    pipelines:
+      metrics:
+        receivers:
+          - otlp
+        processors:
+          - memory_limiter
+          - resource
+          - batch
+        exporters:
+          - prometheusremotewrite/mimir
+
+      logs:
+        receivers:
+          - otlp
+        processors:
+          - memory_limiter
+          - resource
+          - attributes/loki_hints
+          - batch
+        exporters:
+          - loki
