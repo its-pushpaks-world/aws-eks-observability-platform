@@ -1,0 +1,49 @@
+# gitops/apps/observability/otel-gateway-config.yaml
+
+apiVersion: v1
+kind: ConfigMap
+
+metadata:
+  name: otel-gateway-config
+  namespace: observability
+
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      batch: {}
+
+    exporters:
+      prometheusremotewrite/mimir:
+        endpoint: http://mimir-distributor:8080/api/v1/push
+        headers:
+          X-Scope-OrgID: "dev"
+
+      loki:
+        endpoint: http://loki-write:3100/loki/api/v1/push
+        headers:
+          X-Scope-OrgID: "dev"
+
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+
+    service:
+      extensions: [health_check]
+      pipelines:
+        metrics:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [prometheusremotewrite/mimir]
+
+        logs:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [loki]
