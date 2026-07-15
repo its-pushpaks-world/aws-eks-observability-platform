@@ -1,0 +1,36 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+
+metadata:
+  name: grafana
+  namespace: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "40"
+
+spec:
+  project: default
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+
+  sources:
+    - repoURL: https://grafana.github.io/helm-charts
+      chart: grafana
+      targetRevision: 8.3.6
+      helm:
+        releaseName: grafana
+        valueFiles:
+          - $values/gitops/platform/04-grafana/values.yaml
+
+    - repoURL: https://github.com/its-pushpaks-world/aws-eks-observability-platform.git
+      targetRevision: main
+      ref: values
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+
+    syncOptions:
+      - CreateNamespace=true
