@@ -1,0 +1,139 @@
+# gitops/platform/01-mimir/values.yaml
+
+global:
+  extraEnv:
+    - name: JAEGER_AGENT_HOST
+      value: ""
+
+mimir:
+  structuredConfig:
+    multitenancy_enabled: true
+
+    limits:
+      ingestion_rate: 5000
+      ingestion_burst_size: 10000
+      max_global_series_per_user: 100000
+      compactor_blocks_retention_period: 24h
+
+    blocks_storage:
+      backend: filesystem
+      filesystem:
+        dir: /data/blocks
+      bucket_store:
+        sync_dir: /data/tsdb-sync
+
+    ruler_storage:
+      backend: filesystem
+      filesystem:
+        dir: /data/ruler
+
+    alertmanager_storage:
+      backend: filesystem
+      filesystem:
+        dir: /data/alertmanager
+
+    server:
+      log_level: warn
+
+minio:
+  enabled: false
+
+nginx:
+  enabled: true
+  replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+
+gateway:
+  enabledNonEnterprise: true
+  replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+
+distributor:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+ingester:
+  replicas: 1
+  zoneAwareReplication:
+    enabled: false
+  persistentVolume:
+    enabled: true
+    size: 5Gi
+  resources:
+    requests:
+      cpu: 150m
+      memory: 512Mi
+    limits:
+      memory: 1Gi
+
+querier:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+query_frontend:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 256Mi
+
+store_gateway:
+  replicas: 1
+  zoneAwareReplication:
+    enabled: false
+  persistentVolume:
+    enabled: true
+    size: 3Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+compactor:
+  replicas: 1
+  persistentVolume:
+    enabled: true
+    size: 3Gi
+  resources:
+    requests:
+      cpu: 50m
+      memory: 256Mi
+    limits:
+      memory: 512Mi
+
+ruler:
+  enabled: false
+
+alertmanager:
+  enabled: false
+
+overrides_exporter:
+  enabled: false
+
+metaMonitoring:
+  serviceMonitor:
+    enabled: false
