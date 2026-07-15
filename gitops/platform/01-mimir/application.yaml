@@ -25,7 +25,7 @@ spec:
         valueFiles:
           - $values/gitops/platform/01-mimir/values.yaml
 
-    - repoURL: https://github.com/YOUR_USER/aws-eks-observability-platform.git
+    - repoURL: https://github.com/its-pushpaks-world/aws-eks-observability-platform.git
       targetRevision: main
       ref: values
 
